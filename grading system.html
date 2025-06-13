@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fletcher//Neh Grading System</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --primary-color: #004aad;
+      --secondary-color: #f0f4ff;
+      --accent-color: #e7f0ff;
+      --header-text: white;
+      --button-text: white;
+      --grade-a: green;
+      --grade-f: red;
+    }
+
+    body.light-theme {
+      --primary-color: #004aad;
+      --secondary-color: #f0f4ff;
+      --accent-color: #e7f0ff;
+      --header-text: white;
+      --button-text: white;
+      background-image: url('https://www.transparenttextures.com/patterns/cubes.png');
+      background-size: cover;
+    }
+
+    body.dark-theme {
+      --primary-color: #222;
+      --secondary-color: #111;
+      --accent-color: #333;
+      --header-text: #eee;
+      --button-text: #eee;
+      background-image: url('https://www.transparenttextures.com/patterns/stardust.png');
+      background-size: cover;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Inter', sans-serif;
+    }
+
+    body {
+      background: var(--secondary-color);
+      color: #333;
+      padding: 2rem;
+      transition: background 0.3s ease;
+    }
+
+    header {
+      background-color: var(--primary-color);
+      color: var(--header-text);
+      text-align: center;
+      padding: 1.5rem;
+      border-radius: 10px;
+      margin-bottom: 2rem;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: auto;
+      background: white;
+      padding: 2rem;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    input, select, button {
+      width: 100%;
+      padding: 0.8rem;
+      margin-bottom: 1rem;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+
+    button {
+      background-color: var(--primary-color);
+      color: var(--button-text);
+      border: none;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .theme-toggle, .export-section {
+      margin-bottom: 1rem;
+      text-align: center;
+    }
+
+    .result, .record {
+      margin-top: 1.5rem;
+      font-size: 1.1rem;
+    }
+
+    .recorded-data {
+      margin-top: 2rem;
+      background: var(--accent-color);
+      padding: 1rem;
+      border-radius: 8px;
+    }
+
+    .search-bar {
+      margin: 1rem 0;
+    }
+
+    footer {
+      text-align: center;
+      margin-top: 2rem;
+      color: #555;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+    }
+
+    table, th, td {
+      border: 1px solid #ccc;
+    }
+
+    th, td {
+      padding: 0.8rem;
+      text-align: left;
+    }
+
+    th {
+      background-color: var(--primary-color);
+      color: var(--header-text);
+    }
+
+    canvas {
+      margin-top: 2rem;
+      background: #fff;
+      border-radius: 10px;
+    }
+  </style>
+</head>
+<body class="light-theme">
+  <header>
+    <h1>Fletcher//Neh Grading System</h1>
+    <p>Enter scores and keep records of student grades</p>
+  </header>
+
+  <div class="container">
+    <div class="theme-toggle">
+      <button onclick="toggleTheme()">Toggle Theme</button>
+    </div>
+
+    <label for="studentName">Student Name:</label>
+    <input type="text" id="studentName" placeholder="Enter student name" />
+
+    <label for="score">Score (0 - 100):</label>
+    <input type="number" id="score" placeholder="Enter score" min="0" max="100" />
+
+    <button onclick="calculateGrade()">Record Grade</button>
+
+    <div class="search-bar">
+      <label for="searchInput">Search Student:</label>
+      <input type="text" id="searchInput" onkeyup="searchStudent()" placeholder="Search by name..." />
+    </div>
+
+    <div class="export-section">
+      <button onclick="exportToCSV()">Export to CSV</button>
+    </div>
+
+    <div class="result" id="result"></div>
+
+    <div class="recorded-data">
+      <h3>Recorded Grades:</h3>
+      <table id="gradesTable">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Score</th>
+            <th>Grade</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <canvas id="gradeChart" width="400" height="200"></canvas>
+  </div>
+
+  <footer>
+    &copy; 2025 Fletcher//Neh Grading System
+  </footer>
+
+  <script>
+    const gradeCounts = { A: 0, B: 0, C: 0, D: 0, F: 0 };
+    let chart;
+
+    function calculateGrade() {
+      const name = document.getElementById('studentName').value.trim();
+      const score = parseFloat(document.getElementById('score').value);
+      const resultDiv = document.getElementById('result');
+
+      if (!name || isNaN(score)) {
+        resultDiv.textContent = "Please enter valid name and score.";
+        resultDiv.style.color = "var(--grade-f)";
+        return;
+      }
+
+      let grade = '';
+      if (score >= 90) grade = 'A';
+      else if (score >= 80) grade = 'B';
+      else if (score >= 70) grade = 'C';
+      else if (score >= 60) grade = 'D';
+      else grade = 'F';
+
+      resultDiv.style.color = grade === 'F' ? 'var(--grade-f)' : 'var(--grade-a)';
+      resultDiv.textContent = `${name} scored ${score} and received grade: ${grade}`;
+
+      const tableBody = document.querySelector('#gradesTable tbody');
+      const newRow = tableBody.insertRow();
+
+      newRow.insertCell(0).textContent = name;
+      newRow.insertCell(1).textContent = score;
+      newRow.insertCell(2).textContent = grade;
+
+      gradeCounts[grade]++;
+      updateChart();
+
+      document.getElementById('studentName').value = '';
+      document.getElementById('score').value = '';
+    }
+
+    function toggleTheme() {
+      const body = document.body;
+      body.classList.toggle('dark-theme');
+      body.classList.toggle('light-theme');
+    }
+
+    function searchStudent() {
+      const input = document.getElementById('searchInput').value.toLowerCase();
+      const rows = document.querySelectorAll('#gradesTable tbody tr');
+
+      rows.forEach(row => {
+        const name = row.cells[0].textContent.toLowerCase();
+        row.style.display = name.includes(input) ? '' : 'none';
+      });
+    }
+
+    function exportToCSV() {
+      const rows = document.querySelectorAll("#gradesTable tr");
+      let csv = Array.from(rows).map(row =>
+        Array.from(row.cells).map(cell => cell.textContent).join(",")
+      ).join("\n");
+
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.setAttribute("href", url);
+      a.setAttribute("download", "grades.csv");
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+
+    function updateChart() {
+      const ctx = document.getElementById('gradeChart').getContext('2d');
+      if (chart) chart.destroy();
+      chart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['A', 'B', 'C', 'D', 'F'],
+          datasets: [{
+            label: 'Grade Distribution',
+            data: [gradeCounts['A'], gradeCounts['B'], gradeCounts['C'], gradeCounts['D'], gradeCounts['F']],
+            backgroundColor: [
+              'green', 'blue', 'orange', 'purple', 'red'
+            ]
+          }]
+        },
+        options: {
+          responsive: true,
+          animation: {
+            duration: 1000,
+            easing: 'easeInOutBounce'
+          }
+        }
+      });
+    }
+  </script>
+</body>
+</html>
